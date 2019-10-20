@@ -16,7 +16,8 @@ def mainloop():
     games = get_games(opponent, params)
     output = games_to_plays(games, opponent, params)
 
-    save_to_csv(output)
+    #save_to_csv(output)
+    save_to_txt(output, opponent + '_press.txt')
 
 # Turn an api key into a jwt key and format as header
 # str -> {str: str}
@@ -48,12 +49,14 @@ def games_to_plays (games, opponent, params):
         r = requests.get('https://api.profootballfocus.com/v1/video/ncaa/games/'+game+'/plays', headers = params)
         plays = r.json()['plays']
         for play in plays:
-            if 'press_players' in play.keys():
+            if 'press_players' in play.keys() and play['run_pass'] is 'P' and not play['screen']:
                 wrs = get_players_in_press(play['press_players'], opponent)
                 for wr in wrs:
                     if wr not in wr_dict:
                         wr_dict[wr] = []
-                    wr_dict[wr].append((play['game_id'],play['play_id']))
+                    #wr_dict[wr].append((play['game_id'],play['play_id']))
+                    # Uder does not seem to require game ID
+                    wr_dict[wr].append(str(play['play_id']))
     return wr_dict
                     
 # Parse the press string to return which players
@@ -85,6 +88,19 @@ def save_to_csv (output):
     with open('press.csv', 'w', newline ='') as f:
         writer = csv.writer(f)
         writer.writerows(csv_list)
+
+# Take the dictionary and turn it into a txt
+# This is an attempt to reformat into a more usable form
+# {str : listof (str, str)} -> csv
+def save_to_txt (output, filename):
+    header = ['Player','Game Id', 'Play Id']
+    txt_string = 'Player \t Play Ids\n'
+    for player in output:
+        print(output[player])
+        txt_string += player + '\t' + ','.join(output[player]) + '\n'
+
+    with open(filename, 'w', newline ='') as f:
+        f.write(txt_string)
 
 mainloop()
 
