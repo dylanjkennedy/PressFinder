@@ -49,15 +49,38 @@ def games_to_plays (games, opponent, params):
         r = requests.get('https://api.profootballfocus.com/v1/video/ncaa/games/'+game+'/plays', headers = params)
         plays = r.json()['plays']
         for play in plays:
-            if 'press_players' in play.keys() and play['run_pass'] is 'P' and not play['screen']:
+            if 'press_players' in play.keys() and is_valid(play):
                 wrs = get_players_in_press(play['press_players'], opponent)
                 for wr in wrs:
                     if wr not in wr_dict:
                         wr_dict[wr] = []
                     #wr_dict[wr].append((play['game_id'],play['play_id']))
-                    # Uder does not seem to require game ID
+                    # User does not seem to require game ID
                     wr_dict[wr].append(str(play['play_id']))
     return wr_dict
+
+# For a dictionary for a play from pff, return false it if it is
+# not a passing play or if the play has a sack, throwaway, screen, or penalty
+# dict -> bool
+def is_valid (play):
+    
+    if play['run_pass'] != 'P':
+        return False
+
+    if play['screen'] == 1:
+        return False
+    
+    if play['pass_result'] == 'SACK':
+        return False
+
+    if play['pass_result'] == 'THROWN AWAY':
+        return False
+    
+    if play['penalty'] != None:
+        return False
+    
+    return True
+
                     
 # Parse the press string to return which players
 # (from the team we care about) are in press coverage
@@ -96,8 +119,7 @@ def save_to_txt (output, filename):
     header = ['Player','Game Id', 'Play Id']
     txt_string = 'Player \t Play Ids\n'
     for player in output:
-        print(output[player])
-        txt_string += player + '\t' + ','.join(output[player]) + '\n'
+        txt_string += player + '\t' + ','.join(output[player]) + '\n\n'
 
     with open(filename, 'w', newline ='') as f:
         f.write(txt_string)
